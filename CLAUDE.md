@@ -13,3 +13,6 @@ Standing rules (same as agent_world; full list in `docs/agent_world/principles.m
 - Prefer GIFs/visual outputs of behaviour over asking Kumar to run things.
 - Code stays machine-independent (containerizable); no personal paths or usernames.
 - Keep from-scratch code to a minimum: reuse stable packages (stable-pretraining, stable-worldmodel, timm, scikit-learn) where they give a pipeline with little effort, and be critical before writing new code.
+- Run independent work in parallel and delegate to subagents wherever subtask and data independence allow.
+- Surface questions through the AskUserQuestion tool: default first (Recommended), other sensible options, room for notes.
+- Costly, risky or critical-environment commands (cloud, large training) follow the `hitl-dev` skill: Claude does the groundwork and writes a step file; the user runs the steps.
