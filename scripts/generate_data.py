@@ -1,6 +1,6 @@
-"""Generate frames, actions and ground truth from agent_world with a scripted policy.
+"""Generate frames, actions and ground truth from agent_world with a random-walk policy.
 
-uv run python scripts/generate_data.py --name pilot --envs 64 --steps 600 --policy waypoint
+uv run python scripts/generate_data.py --name pretrain_100 --envs 512 --steps 500 --chasers 0 --seed 100
 Writes data/<name>/{frames.npy [E,T+1,48,64,3] uint8, truth.npz}.
 """
 
@@ -12,7 +12,7 @@ import torch
 from agent_world import WorldConfig, make_env
 
 from hjepa_agent.config import DATA_DIR
-from hjepa_agent.policies import SmoothPolicy, WaypointPolicy
+from hjepa_agent.policies import SmoothPolicy
 
 
 def main():
@@ -20,14 +20,14 @@ def main():
     ap.add_argument("--name", required=True)
     ap.add_argument("--envs", type=int, default=64)
     ap.add_argument("--steps", type=int, default=600)
-    ap.add_argument("--policy", choices=["waypoint", "smooth"], default="waypoint")
     ap.add_argument("--chasers", type=int, default=2, help="chasers per room")
+    ap.add_argument("--patches", action="store_true", help="rotating patch in each doorway (off by default: introduced after pretraining)")
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
 
-    env = make_env(num_envs=a.envs, seed=a.seed, config=WorldConfig(chasers_per_room=a.chasers))
+    env = make_env(num_envs=a.envs, seed=a.seed, config=WorldConfig(chasers_per_room=a.chasers, rotating_patches=a.patches))
     sc, dev = env.scenario, env.device
-    pol = (WaypointPolicy if a.policy == "waypoint" else SmoothPolicy)(env)
+    pol = SmoothPolicy(env)
     ci = [i for i, (e, _) in enumerate(sc._visible) if e.name.startswith("chaser")]
     out = DATA_DIR / a.name
     out.mkdir(parents=True, exist_ok=True)
