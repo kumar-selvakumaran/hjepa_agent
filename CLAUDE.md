@@ -12,3 +12,4 @@ Standing rules (same as agent_world; full list in `docs/agent_world/principles.m
 - Docs are append-only. Record a pivot only after it has been agreed.
 - Prefer GIFs/visual outputs of behaviour over asking Kumar to run things.
 - Code stays machine-independent (containerizable); no personal paths or usernames.
+- Keep from-scratch code to a minimum: reuse stable packages (stable-pretraining, stable-worldmodel, timm, scikit-learn) where they give a pipeline with little effort, and be critical before writing new code.
