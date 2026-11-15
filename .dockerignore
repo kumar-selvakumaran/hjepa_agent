@@ -9,3 +9,4 @@ data/
 assets/
 .env
 .env.*
+.uv-cache/
