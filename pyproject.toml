@@ -5,6 +5,7 @@ description = "An extendable agent following LeCun's autonomous machine intellig
 requires-python = ">=3.13"
 dependencies = [
     "agent-world",
+    "imageio>=2.38.2",
     "stable-pretraining>=0.1.8",
     "stable-worldmodel>=0.1.1",
     "torch>=2.11.0",
