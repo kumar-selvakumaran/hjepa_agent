@@ -15,4 +15,5 @@ Standing rules (same as agent_world; full list in `docs/agent_world/principles.m
 - Keep from-scratch code to a minimum: reuse stable packages (stable-pretraining, stable-worldmodel, timm, scikit-learn) where they give a pipeline with little effort, and be critical before writing new code.
 - Run independent work in parallel and delegate to subagents wherever subtask and data independence allow.
 - Surface questions through the AskUserQuestion tool: default first (Recommended), other sensible options, room for notes.
-- Costly, risky or critical-environment commands (cloud, large training) follow the `hitl-dev` skill: Claude does the groundwork and writes a step file; the user runs the steps.
+- Costly, risky or critical-environment commands (cloud, large training) follow the `hitl-dev` skill: Claude does the groundwork and writes a step file (in `scratch/hitl/`); the user runs the steps.
+- Never push anything (docs above all) without Kumar's explicit confirmation. HITL step files, helper scripts and outputs live in the gitignored `scratch/hitl/`.
