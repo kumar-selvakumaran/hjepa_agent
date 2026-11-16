@@ -1,14 +1,13 @@
 """Linear probes on frozen per-frame features against ground truth, with baselines.
 
 uv run python scripts/eval_probes.py --data pretrain_100 --features pixels|random|ckpt [--ckpt path]
-Writes outputs/probes_<data>_<features>.json. Features: raw pixels (PCA 256), a random-init timm ViT-tiny, or a
-trained encoder checkpoint. Always the mean of patch tokens for ViTs."""
+Writes outputs/probes_<data>_<features>.json. Features: raw pixels (PCA 256); the LeWM frame latent (CLS token through
+the projector) of a randomly initialised model; or of a trained Lightning checkpoint. Labels are privileged and for evaluation only."""
 
 import argparse
 import json
 
 import numpy as np
-import timm
 import torch
 from sklearn.decomposition import PCA
 from sklearn.linear_model import Ridge
@@ -17,29 +16,29 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from hjepa_agent.config import OUTPUTS_DIR
-from hjepa_agent.data import FrameDataset
+from hjepa_agent.data import compute_stats, frame_labels, load_frames, sample_frame_indices
+from hjepa_agent.model import build_lewm
+from hjepa_agent.recipe import Recipe
 
 REG = ["pos_x", "pos_y", "heading_cos", "heading_sin"]
-FLAGS = ["room2", "patch_visible"]
+FLAGS = ["room2", "patch_visible", "food_visible"]
 CHASER_REG, CHASER_FLAGS = ["chaser_dist", "chaser_bearing_cos", "chaser_bearing_sin"], ["chaser_visible"]
 
 
-def take(ds, n, rng):
-    items = [ds[i] for i in rng.choice(len(ds), min(n, len(ds)), replace=False)]
-    return torch.stack([it["image"] for it in items]), {k: np.array([it[k] for it in items]) for k in items[0] if k != "image"}
-
-
-def vit(ckpt=None, device="cuda"):
-    m = timm.create_model("vit_tiny_patch16_224", pretrained=False, img_size=(48, 64), patch_size=(6, 8), num_classes=0).to(device).eval()
-    if ckpt:
-        m.load_state_dict(torch.load(ckpt, map_location=device))
-    return m
+def take(names, split, n, seed, stats=None):
+    idx = sample_frame_indices(names, split, n, seed=seed)
+    return load_frames(names, idx, stats), frame_labels(names, split, idx)
 
 
 @torch.no_grad()
-def vit_features(m, x, device="cuda", bs=512):
-    out = [m.forward_features(x[i:i + bs].to(device))[:, m.num_prefix_tokens:].mean(1).cpu() for i in range(0, len(x), bs)]
-    return torch.cat(out).numpy()
+def lewm_latents(x, ckpt=None, device="cuda", bs=512):
+    """The LeWM frame latent of each frame; weights from a Lightning checkpoint, or random when ckpt is None."""
+    m = build_lewm(Recipe()).to(device)
+    if ckpt:
+        sd = torch.load(ckpt, map_location=device, weights_only=False)["state_dict"]
+        m.load_state_dict({k[len("model."):]: v for k, v in sd.items() if k.startswith("model.")})
+    m.eval()
+    return torch.cat([m.encode({"pixels": x[i:i + bs, None].to(device)})["emb"][:, 0].float().cpu() for i in range(0, len(x), bs)]).numpy()
 
 
 def collapse(f):
@@ -56,19 +55,20 @@ def main():
     ap.add_argument("--train-n", type=int, default=20000)
     ap.add_argument("--val-n", type=int, default=5000)
     a = ap.parse_args()
-    rng = np.random.RandomState(0)
-    xtr, ytr = take(FrameDataset(a.data, "train"), a.train_n, rng)
-    xva, yva = take(FrameDataset(a.data, "val"), a.val_n, rng)
+    stats = None if a.features == "pixels" else compute_stats(a.data)
+    xtr, ytr = take(a.data, "train", a.train_n, 0, stats)
+    xva, yva = take(a.data, "val", a.val_n, 1, stats)
     if a.features == "pixels":
         pca = PCA(256, random_state=0).fit(xtr.flatten(1).numpy())
         ftr, fva = pca.transform(xtr.flatten(1).numpy()), pca.transform(xva.flatten(1).numpy())
     else:
-        m = vit(a.ckpt if a.features == "ckpt" else None)
-        ftr, fva = vit_features(m, xtr), vit_features(m, xva)
+        dev = "cuda" if torch.cuda.is_available() else "cpu"
+        ckpt = a.ckpt if a.features == "ckpt" else None
+        ftr, fva = lewm_latents(xtr, ckpt, dev), lewm_latents(xva, ckpt, dev)
     res = {"features": a.features, "data": a.data, "collapse": collapse(fva), "r2": {}, "auc": {}}
     reg = REG + [k for k in CHASER_REG if k in ytr]
     for k in reg:
-        mask_tr, mask_va = (ytr["chaser_visible"] > 0, yva["chaser_visible"] > 0) if k.startswith("chaser") else (slice(None), slice(None))
+        mask_tr, mask_va = (ytr["chaser_visible"], yva["chaser_visible"]) if k.startswith("chaser") else (np.ones(len(ftr), bool), np.ones(len(fva), bool))
         if np.sum(mask_tr) < 20 or np.sum(mask_va) < 5:
             continue
         p = make_pipeline(StandardScaler(), Ridge(alpha=1.0)).fit(ftr[mask_tr], ytr[k][mask_tr]).predict(fva[mask_va])
@@ -76,8 +76,8 @@ def main():
     for k in FLAGS + [k for k in CHASER_FLAGS if k in ytr]:
         if len(set(ytr[k])) < 2 or len(set(yva[k])) < 2:
             continue
-        p = make_pipeline(StandardScaler(), Ridge(alpha=1.0)).fit(ftr, ytr[k]).predict(fva)
-        res["auc"][k] = float(roc_auc_score(yva[k] > 0, p))
+        p = make_pipeline(StandardScaler(), Ridge(alpha=1.0)).fit(ftr, ytr[k].astype(float)).predict(fva)
+        res["auc"][k] = float(roc_auc_score(yva[k], p))
     OUTPUTS_DIR.mkdir(exist_ok=True)
     out = OUTPUTS_DIR / f"probes_{'+'.join(a.data)}_{a.features}.json"
     out.write_text(json.dumps(res, indent=1))
