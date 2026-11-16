@@ -1,15 +1,16 @@
 import torch
 from agent_world import WorldConfig, make_env
 
-from hjepa_agent.policies import SmoothPolicy
+from hjepa_agent.policies import RandomWalkPolicy
 
 
 def test_random_walk_gives_bounded_actions_and_moves_agent():
     env = make_env(num_envs=4, seed=0, device="cpu", config=WorldConfig())
     env.reset()
-    pol = SmoothPolicy(env)
+    pol = RandomWalkPolicy(env)
     a = pol()
     assert a.shape == (4, 2) and a.abs().max() <= 1.0
+    assert pol.scale.min() >= 0.3 and 0.04 <= pol.p.min() and pol.p.max() <= 1.0
     pos0 = env.scenario.scene().pos[:, 0].clone()
     for _ in range(20):
         env.step([pol()])

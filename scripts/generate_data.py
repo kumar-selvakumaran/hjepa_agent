@@ -12,7 +12,7 @@ import torch
 from agent_world import WorldConfig, make_env
 
 from hjepa_agent.config import DATA_DIR
-from hjepa_agent.policies import SmoothPolicy
+from hjepa_agent.policies import RandomWalkPolicy
 
 
 def main():
@@ -27,7 +27,7 @@ def main():
 
     env = make_env(num_envs=a.envs, seed=a.seed, config=WorldConfig(chasers_per_room=a.chasers, rotating_patches=a.patches))
     sc, dev = env.scenario, env.device
-    pol = SmoothPolicy(env)
+    pol = RandomWalkPolicy(env)
     ci = [i for i, (e, _) in enumerate(sc._visible) if e.name.startswith("chaser")]
     out = DATA_DIR / a.name
     out.mkdir(parents=True, exist_ok=True)
