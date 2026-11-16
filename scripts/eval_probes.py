@@ -17,7 +17,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from hjepa_agent.config import OUTPUTS_DIR
-from hjepa_agent.data import compute_stats, frame_labels, load_frames, sample_frame_indices
+from hjepa_agent.data import compute_stats, frame_labels, load_frames, load_stats, sample_frame_indices
 from hjepa_agent.model import build_lewm
 from hjepa_agent.recipe import Recipe
 
@@ -53,11 +53,16 @@ def main():
     ap.add_argument("--data", nargs="+", required=True)
     ap.add_argument("--features", choices=["pixels", "random", "ckpt"], required=True)
     ap.add_argument("--ckpt")
+    ap.add_argument("--stats-from", nargs="+", help="shards whose normalisation statistics to use (default: --data); use the TRAINING shards for transfer sets")
     ap.add_argument("--out", type=Path, help="result file; default outputs/probes_<data>_<features>.json")
     ap.add_argument("--train-n", type=int, default=20000)
     ap.add_argument("--val-n", type=int, default=5000)
     a = ap.parse_args()
-    stats = None if a.features == "pixels" else compute_stats(a.data)
+    src = a.stats_from or a.data
+    try:
+        stats = None if a.features == "pixels" else load_stats(src)
+    except FileNotFoundError:
+        stats = compute_stats(src)
     xtr, ytr = take(a.data, "train", a.train_n, 0, stats)
     xva, yva = take(a.data, "val", a.val_n, 1, stats)
     if a.features == "pixels":
