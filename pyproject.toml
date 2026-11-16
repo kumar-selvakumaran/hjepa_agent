@@ -6,8 +6,11 @@ requires-python = ">=3.13"
 dependencies = [
     "agent-world",
     "imageio>=2.38.2",
+    "nvidia-ml-py>=13.615.71",
+    "psutil>=7.2.2",
     "stable-pretraining>=0.1.8",
     "stable-worldmodel>=0.1.1",
+    "tensorboard>=2.21.0",
     "torch>=2.11.0",
 ]
 
