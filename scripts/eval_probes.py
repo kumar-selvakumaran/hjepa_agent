@@ -6,6 +6,7 @@ the projector) of a randomly initialised model; or of a trained Lightning checkp
 
 import argparse
 import json
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -52,6 +53,7 @@ def main():
     ap.add_argument("--data", nargs="+", required=True)
     ap.add_argument("--features", choices=["pixels", "random", "ckpt"], required=True)
     ap.add_argument("--ckpt")
+    ap.add_argument("--out", type=Path, help="result file; default outputs/probes_<data>_<features>.json")
     ap.add_argument("--train-n", type=int, default=20000)
     ap.add_argument("--val-n", type=int, default=5000)
     a = ap.parse_args()
@@ -79,7 +81,8 @@ def main():
         p = make_pipeline(StandardScaler(), Ridge(alpha=1.0)).fit(ftr, ytr[k].astype(float)).predict(fva)
         res["auc"][k] = float(roc_auc_score(yva[k], p))
     OUTPUTS_DIR.mkdir(exist_ok=True)
-    out = OUTPUTS_DIR / f"probes_{'+'.join(a.data)}_{a.features}.json"
+    out = a.out or OUTPUTS_DIR / f"probes_{'+'.join(a.data)}_{a.features}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(res, indent=1))
     print(json.dumps(res, indent=1))
 
