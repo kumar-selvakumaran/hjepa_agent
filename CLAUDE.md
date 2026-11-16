@@ -16,4 +16,4 @@ Standing rules (same as agent_world; full list in `docs/agent_world/principles.m
 - Run independent work in parallel and delegate to subagents wherever subtask and data independence allow.
 - Surface questions through the AskUserQuestion tool: default first (Recommended), other sensible options, room for notes.
 - Costly, risky or critical-environment commands (cloud, large training) follow the `hitl-dev` skill: Claude does the groundwork and writes a step file (in `scratch/hitl/`); the user runs the steps.
-- Never push anything (docs above all) without Kumar's explicit confirmation. HITL step files, helper scripts and outputs live in the gitignored `scratch/hitl/`.
+- Pushing: safe, verified, secret-free code may be pushed; journals and docs need Kumar's confirmation before they are included in git. Large efforts get their own branch, merged into `main` after testing; small non-additive commits may go straight to `main`. HITL step files, helper scripts and outputs live in the gitignored `scratch/hitl/`.
