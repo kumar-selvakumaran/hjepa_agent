@@ -12,6 +12,7 @@ dependencies = [
     "stable-worldmodel>=0.1.1",
     "tensorboard>=2.21.0",
     "torch>=2.11.0",
+    "torchvision>=0.26.0",
 ]
 
 [build-system]
@@ -26,6 +27,7 @@ testpaths = ["tests"]
 
 [tool.uv.sources]
 torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
 agent-world = { git = "https://github.com/kumar-selvakumaran/agent_world.git" }
 
 [[tool.uv.index]]
