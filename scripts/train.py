@@ -169,7 +169,7 @@ def main():
         max_epochs=recipe.epochs if not args.max_steps else -1, max_steps=args.max_steps or -1,
         val_check_interval=min(recipe.val_every_steps, total_steps), check_val_every_n_epoch=None, limit_val_batches=recipe.val_batches,
         log_every_n_steps=10, logger=[CSVLogger(out, name="csv"), TensorBoardLogger(out, name="tb")],
-        callbacks=[ModelCheckpoint(dirpath=ck, filename="step{step_idx:.0f}", monitor="step_idx", mode="max", save_top_k=3,
+        callbacks=[ModelCheckpoint(dirpath=ck, filename="step{step_idx:.0f}", monitor="step_idx", mode="max", save_top_k=-1,
                                    every_n_train_steps=recipe.ckpt_every_steps, save_last=True, auto_insert_metric_name=False),
                    OnExceptionCheckpoint(dirpath=ck, filename="on_exception"),
                    Timer(duration=datetime.timedelta(minutes=recipe.time_cap_minutes)),
