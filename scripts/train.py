@@ -128,6 +128,7 @@ def main():
     ap.add_argument("--batch-size", type=int)
     ap.add_argument("--sigreg-weight", type=float)
     ap.add_argument("--val-batches", type=int)
+    ap.add_argument("--time-cap-minutes", type=int, help="stop gracefully after this many minutes (recipe default 90)")
     ap.add_argument("--weighted", action="store_true", help="importance-weighted sampling for uniform coverage (INT-56)")
     ap.add_argument("--num-workers", type=int)
     ap.add_argument("--resume", nargs="?", const="latest", choices=["latest", "last_good"], help="resume from the newest checkpoint, or from last_good")
@@ -137,7 +138,7 @@ def main():
     ap.add_argument("--force", action="store_true", help="ignore the preflight time-cap check")
     args = ap.parse_args()
 
-    given = dict(epochs=args.epochs, batch_size=args.batch_size, sigreg_weight=args.sigreg_weight, val_batches=args.val_batches)
+    given = dict(epochs=args.epochs, batch_size=args.batch_size, sigreg_weight=args.sigreg_weight, val_batches=args.val_batches, time_cap_minutes=args.time_cap_minutes)
     recipe = dataclasses.replace(Recipe(), **{k: v for k, v in given.items() if v is not None})
     pl.seed_everything(recipe.seed, workers=True)
     out = args.out / args.run_name
