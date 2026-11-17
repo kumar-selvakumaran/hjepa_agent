@@ -47,7 +47,8 @@ class LeWMModule(pl.LightningModule):
         pred_loss = (pred - tgt).pow(2).mean()
         sig = self.sigreg(emb.float().transpose(0, 1))
         loss = pred_loss + self.r.sigreg_weight * sig
-        self.log_dict({"train/loss": loss, "train/pred_loss": pred_loss, "train/sigreg": sig, "step_idx": float(self.global_step)}, on_step=True, prog_bar=True)
+        if self._log_now():  # logging every step cost about 15% of the main process (py-spy, 2026-11-17); the logger only writes every n steps
+            self.log_dict({"train/loss": loss, "train/pred_loss": pred_loss, "train/sigreg": sig, "step_idx": float(self.global_step)}, on_step=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -64,8 +65,17 @@ class LeWMModule(pl.LightningModule):
             "val/eff_rank": effective_rank(flat), "val/dim_std": flat.std(0).mean(),
         }, on_epoch=True, sync_dist=False)
 
+    def _log_now(self):
+        """True on the steps the logger writes (step index n-1, 2n-1, ...), so checkpoint names from step_idx stay exact."""
+        try:
+            n = self.trainer.log_every_n_steps
+        except RuntimeError:  # not attached to a trainer (unit tests)
+            return True
+        return (self.global_step + 1) % n == 0
+
     def on_before_optimizer_step(self, optimizer):
-        self.log("train/grad_norm", grad_norm(self, norm_type=2)["grad_2.0_norm_total"], on_step=True)
+        if self._log_now():  # per-parameter norms every step cost about 31% of the main process (py-spy, 2026-11-17)
+            self.log("train/grad_norm", grad_norm(self, norm_type=2)["grad_2.0_norm_total"], on_step=True)
 
     def configure_optimizers(self):
         opt = torch.optim.AdamW(self.parameters(), lr=self.r.lr, weight_decay=self.r.weight_decay)
