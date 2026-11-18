@@ -1,7 +1,7 @@
 """Train LeWM (encoder and action-conditioned predictor, jointly, from scratch) on random-walk windows.
 
 Local smoke run:  uv run python scripts/train.py --data <shard> --run-name smoke --max-steps 200 --val-batches 5
-Cloud run:        uv run python scripts/train.py --data pretrain_100 pretrain_101 pretrain_102 pretrain_103 --out <persistent dir> --run-name run1
+Cloud run:        uv run python scripts/train.py --data map_pretrain_200 map_pretrain_201 map_pretrain_202 map_pretrain_203 --out <persistent dir> --run-name run1
 Resume:           add --resume. Preflight only: add --preflight-only.
 Outputs: <out>/<run-name>/{checkpoints, csv, tb, env.json, preflight.json, summary.json}.
 No goals or planning exist in this model (INT-11): the loss is next-latent prediction plus SIGReg."""

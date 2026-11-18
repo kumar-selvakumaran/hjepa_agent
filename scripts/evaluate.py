@@ -1,6 +1,6 @@
 """Offline evaluation of a checkpoint: rollout error by horizon, layer probes, history probe, transfer sets.
 
-uv run python scripts/evaluate.py --ckpt <path> --out <dir> [--data pretrain_100 ...] [--transfer transfer_chasers ...]
+uv run python scripts/evaluate.py --ckpt <path> --out <dir> [--data map_pretrain_200 ...] [--transfer map_transfer_chasers ...]
 Writes <out>/evaluation.json and <out>/rollout.png. Labels are privileged and used only here."""
 
 import argparse
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from hjepa_agent import evaluation as ev
 from hjepa_agent.data import compute_stats, frame_labels, load_frames, sample_frame_indices
 
-PRETRAIN = ["pretrain_100", "pretrain_101", "pretrain_102", "pretrain_103"]
+PRETRAIN = ["map_pretrain_200", "map_pretrain_201", "map_pretrain_202", "map_pretrain_203"]
 
 
 def log(msg):
@@ -30,7 +30,7 @@ def main():
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--data", nargs="+", default=PRETRAIN)
-    ap.add_argument("--transfer", nargs="*", default=["transfer_chasers", "transfer_patch_new"])
+    ap.add_argument("--transfer", nargs="*", default=["map_transfer_chasers", "map_transfer_patch", "map_transfer_floor1"])
     ap.add_argument("--episodes", type=int, default=512, help="rollout sequences per data set")
     ap.add_argument("--horizon", type=int, default=16, help="rollout steps after the 3-frame context")
     ap.add_argument("--train-n", type=int, default=20000)

@@ -57,3 +57,4 @@ def test_generate_writes_contract(tmp_path):
         assert not np.isnan(z[k].astype(np.float32)).any(), k
     cfg = json.loads((out / "config.json").read_text())
     assert cfg["seed"] == 3 and cfg["world"]["chasers_per_room"] == 2 and "revisions" in cfg
+    assert cfg["world"]["floor"] == "map" and cfg["world"]["floor_map_seed"] == 0
