@@ -25,8 +25,9 @@ wheels = [
 [[package]]
 name = "agent-world"
 version = "0.1.0"
-source = { git = "https://github.com/kumar-selvakumaran/agent_world.git#f09f40640e38ed94738f5a3795b0c018bb03a263" }
+source = { git = "https://github.com/kumar-selvakumaran/agent_world.git?branch=develop#860ce30a18b1056fbbd25bb67f5933530b74f54f" }
 dependencies = [
+    { name = "pillow" },
     { name = "torch" },
     { name = "vmas" },
 ]
@@ -952,7 +953,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-world", git = "https://github.com/kumar-selvakumaran/agent_world.git" },
+    { name = "agent-world", git = "https://github.com/kumar-selvakumaran/agent_world.git?branch=develop" },
     { name = "imageio", specifier = ">=2.38.2" },
     { name = "nvidia-ml-py", specifier = ">=13.615.71" },
     { name = "psutil", specifier = ">=7.2.2" },

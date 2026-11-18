@@ -1,6 +1,6 @@
 """Generate frames, actions and ground truth from agent_world with a random-walk policy.
 
-uv run python scripts/generate_data.py --name pretrain_100 --envs 512 --steps 500 --chasers 0 --seed 100
+uv run python scripts/generate_data.py --name map_pretrain_200 --envs 512 --steps 500 --chasers 0 --seed 200
 Writes data/<name>/{frames.npy, truth.npz, config.json}; the layout is the shard contract in
 docs/journal/stage1-spec.md section 11. Start poses are dispersed over free space in both rooms.
 """
@@ -36,8 +36,8 @@ def _world_rev():
         return None
 
 
-def generate(name, envs, steps, chasers, patches, seed, out_root=None, device=None):
-    cfg = WorldConfig(chasers_per_room=chasers, rotating_patches=patches)
+def generate(name, envs, steps, chasers, patches, seed, out_root=None, device=None, floor="map", floor_seed=0):
+    cfg = WorldConfig(chasers_per_room=chasers, rotating_patches=patches, floor=floor, floor_map_seed=floor_seed)
     env = make_env(num_envs=envs, seed=seed, config=cfg, device=device)
     sc, dev = env.scenario, env.device
     pol = RandomWalkPolicy(env)
@@ -97,8 +97,10 @@ def main():
     ap.add_argument("--chasers", type=int, default=2, help="chasers per room")
     ap.add_argument("--patches", action="store_true", help="rotating patch in each doorway (off by default: introduced after pretraining)")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--floor", choices=["map", "checker"], default="map", help="map: random window into a large map (default); checker: the old floor")
+    ap.add_argument("--floor-seed", type=int, default=0, help="which floor map; a different seed is a held-out map")
     a = ap.parse_args()
-    generate(a.name, a.envs, a.steps, a.chasers, a.patches, a.seed)
+    generate(a.name, a.envs, a.steps, a.chasers, a.patches, a.seed, floor=a.floor, floor_seed=a.floor_seed)
 
 
 if __name__ == "__main__":

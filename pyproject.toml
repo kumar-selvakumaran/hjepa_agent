@@ -28,7 +28,7 @@ testpaths = ["tests"]
 [tool.uv.sources]
 torch = { index = "pytorch-cu128" }
 torchvision = { index = "pytorch-cu128" }
-agent-world = { git = "https://github.com/kumar-selvakumaran/agent_world.git" }
+agent-world = { git = "https://github.com/kumar-selvakumaran/agent_world.git", branch = "develop" }
 
 [[tool.uv.index]]
 name = "pytorch-cu128"
