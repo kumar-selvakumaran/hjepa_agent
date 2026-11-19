@@ -152,3 +152,24 @@ No gap blocks stage 1. The world model is converged by INT-96 and functional for
 
 - Consequence for G3 and G6: heading modulo 90 degrees may stop being a valid perception target once the floor changes; the gate waits.
 - Consequence for evaluation (INT-100): probe egocentric quantities and pose relative to the episode start.
+
+
+## 8. Added 2026-11-19: results on the map floor (G10 closed; G11 and G12 new)
+
+- **G10, the floor shortcut: closed.** On the map floor the projected latent reads cos(4 × heading) at R² 0.055 / 0.066 (it was 0.52 / 0.48), and CLS at 0.155 (was 0.70). Pixels still read 0.43, from the axis-aligned walls and boxes kept by design **[measured]**.
+- **G11, position and room information fell with the lattice** (significant for localisation):
+  - **Measured:**
+
+    | Probe | Map floor | Pixels | Checkerboard |
+    | --- | --- | --- | --- |
+    | abs(pos_y) MLP, projected | 0.19 / 0.29 | 0.34 | 0.57 |
+    | Room AUC, projected | 0.70 / 0.68 | 0.67 | 0.90 |
+    | Room AUC, all patch tokens | 0.78 / 0.79 | n/a | 0.89 / 0.91 |
+
+    The probes are flat from step 10k, so this is not under-training.
+  - **Hypotheses, untested:**
+    - **Hp1:** the lattice's perspective foreshortening gave a metric distance cue that the map floor lacks.
+    - **Hp2:** latent capacity is spent on texture motion.
+  - **Discriminating test:** probe distance-to-nearest-wall and wall-bearing targets on both models. Hp1 predicts a large drop; Hp2 predicts a drop in every non-motion target.
+  - **Significance:** in INT-99's world, localisation was always meant to come from memory and static objects. This may be the realistic baseline rather than a defect.
+- **G12, the rotating patch is barely detectable as novel:** one-step error on `map_transfer_patch` is ×1.05 / ×1.08 of in-distribution (checkerboard ×1.5 / ×1.6) **[measured]**. On a textured floor, the patch's rotation is a smaller visual signal. This matters for curiosity and surprise stages (G2).

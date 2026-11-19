@@ -197,3 +197,15 @@ Append-only. Labels: see [README.md](README.md).
 - **[Synced]** The agent_world snapshot in `docs/agent_world` was refreshed to its commit 0dd10c9.
 - **[Kumar]** Journals may be pushed after a safety check, without his review (INT-101).
 - **[Expected, unmeasured]** The cos/sin(4 × heading) probe should fall towards the level of absolute heading on the map floor. That fall is the evidence that the shortcut is gone.
+
+
+## 33. Stage 1 on the map floor: the shortcut is gone, and so is most position information (2026-11-19)
+
+- **[Measured]** Two seeds trained healthily: 71,310 steps in 152 minutes, final SIGReg 1.48, rank 93.
+- **[Measured]** Action use came about 8,000 steps later than on the checkerboard. A data bug was ruled out (action-motion correlation 0.95, unchanged).
+- **[Measured]** The heading-mod-90 readout fell from 0.5 to 0.06 (G10 closed). The held-out floor map costs only ×1.07 to ×1.10 extra error, so the map is not memorised.
+- **[Measured]** New gaps:
+  - position and room information in the latent fell to pixel level or below (G11);
+  - the rotating patch is barely noticed as novel (G12).
+- **[Decision]** No continuation run: both pre-registered rules failed (INT-103).
+- **[Cost]** About $5.70; campaign total about $15.20 of $40.

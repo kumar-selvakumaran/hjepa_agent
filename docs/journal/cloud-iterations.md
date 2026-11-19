@@ -278,3 +278,86 @@ Two jobs because GPU compute binds: one job used 42 to 54 percent **[measured]**
 | Cost | About $9.50 of $40 (instance 1 about $1.30; instance 2 about $8.20 to 16:00 UTC), plus filesystem storage |
 | Time | About 4 hours of instance time on the second instance; 2 x 71,310 training steps |
 | Code | Commits `19e315e`, `1809669`, `6e3067e`, `e0d79fe` (fixes, on develop); PR #1 (guard, merged); PR #2 (evaluation suite, open) |
+
+
+---
+
+# Campaign 2026-11-19-lewm-map-floor: stage 1 retrained on the map floor
+
+## Iteration 1 (2026-11-19): two seeds on the map floor
+
+**One line:** both seeds trained healthily on the map floor, but learned to use actions about 8,000 steps later than on the checkerboard. The heading-mod-90 shortcut is gone from the latent, and position and room information fell with it. Both pre-registered continuation rules failed, so the runs were not continued.
+
+### What it is (declarative)
+- **Setup:**
+  - **Recipe:** unchanged.
+  - **Data:** four map-floor shards, `map_pretrain_200` to `203`.
+  - **Runs:** `map1` (seed 42) and `map2` (seed 43), together on one A100 40 GB.
+  - **Code:** PR #3 (`feature/map-floor-data`, commit 371f186), with the world at agent_world `develop`, commit 860ce30.
+- **Predictions, recorded before launch:**
+
+  | Id | Prediction | Outcome |
+  | --- | --- | --- |
+  | P1 | The heading-mod-90 probe falls towards 0 | **Confirmed:** projected 0.055 / 0.066 (checkerboard 0.52 / 0.48); CLS 0.155 (was 0.70) |
+  | P2 | Training stays healthy | **Confirmed:** SIGReg 1.48 / 1.49, rank 93.1 / 92.5, no guard stop |
+  | P3 | One-step loss is higher than on the checkerboard | **Unclear:** val pred loss 0.0134 / 0.0132 against 0.0136; the latent spaces differ, so this does not compare directly |
+  | P4 | The held-out floor map costs little extra error | **Confirmed:** ×1.07 / ×1.10 at h=1, so the map is not memorised |
+
+- **A suspicion during the run:** at step 3,000 the predictor ignored actions. Copy ratio was 1.02 and action sensitivity 1.03; checkerboard run2 had 0.45 and 3.1 at the same step.
+
+  | Id | Hypothesis | Prediction | Test | Outcome |
+  | --- | --- | --- | --- | --- |
+  | H1 | Late onset: textured input is harder | Action sensitivity above 1.5 by step 6k to 10k | Keep training (free) | **Supported:** 1.29 / 1.51 at step 10k, 6.7 / 7.1 at the end |
+  | H2 | A data bug: actions do not drive motion | Low action-motion correlation | Correlate actions with recorded pose changes | **Rejected:** turn 0.951 (checkerboard 0.949), forward 0.919 (0.917) |
+  | H3 | Unpredictable texture dominates the latent | Action sensitivity stays near 1 | Same as H1 | Rejected |
+
+- **Continuation** (Kumar allowed it; the rule was recorded before the end):
+  - **Built:** `--init-from` for a warm restart (PR #5, stacked on #3), because a plain resume would push the cosine schedule past its end.
+  - **Rule (a), the late drop in val loss, fails:** steps 59k to 71k gave −2.2% on both seeds, the same as the converged checkerboard runs (−2.2% / −2.9%), and under twice the seed spread.
+  - **Rule (b), the probe trend, fails:** from step 50k to final, every probe moved by less than 0.01 on both seeds; the seed spread is about 0.03.
+- **Final evaluation (E02) and probe trend (E04):**
+
+  | Measure (MLP R², or AUC) | Checkerboard run1 / run2 | Map map1 / map2 | Pixels (map) |
+  | --- | --- | --- | --- |
+  | cos(4 × heading), projected | 0.52 / 0.48 | 0.055 / 0.066 | 0.43 |
+  | abs(pos_y), projected | 0.57 / 0.57 | 0.19 / 0.29 | 0.34 |
+  | Room AUC, projected | 0.90 / 0.90 | 0.70 / 0.68 | 0.67 |
+  | Room AUC, all patch tokens | 0.89 / 0.91 | 0.78 / 0.79 | 0.67 |
+  | Rollout model/copy, h=1 / h=16 | 0.07 / 0.48 | 0.21 / 0.54 | n/a |
+  | Novelty, chasers (error ratio, h=1) | ×2.5 / ×2.7 | ×1.9 / ×1.9 | n/a |
+  | Novelty, patch (error ratio, h=1) | ×1.5 / ×1.6 | ×1.08 / ×1.05 | n/a |
+
+### How it works (procedural)
+1. **Removing the floor lattice removes two things:**
+   - the heading-mod-90 cue, which the projected latent reads at R² 0.06;
+   - most of the position and room information the latent had.
+2. **The position probes stay flat from step 10k,** which rules out under-training as the cause.
+3. **Pixels still read heading mod 90 at 0.43,** from the axis-aligned walls and boxes (kept by design). The encoder does not carry it into the latent.
+4. **Actions are learned late (H1)** because motion has to be read from irregular texture rather than a regular lattice. The final action sensitivity is not comparable across latent spaces.
+
+### Limits and unknowns
+- **Why position fell is untested.** Candidates:
+  - **Hp1:** the lattice's perspective foreshortening was a metric distance cue.
+  - **Hp2:** latent capacity goes to texture motion.
+
+  A discriminating test would probe distance-to-wall targets, or train on a plain (untextured) floor.
+- **Copy ratio and action sensitivity** do not compare across floors.
+- **Cost:** about $5.70 this session; about $15.20 of $40 for all cloud work.
+
+### Results
+- **Stopping rule holds:**
+  - no open failure;
+  - targets measured on held-out data against baselines;
+  - probes flat from step 10k onwards;
+  - seeds agree within their spread.
+- **The model is converged for this recipe on this floor.** The remaining gaps (G11, G12 in `world-model-gaps.md`) are recipe and world questions for Kumar, not training failures.
+
+## Closing (campaign 2026-11-19-lewm-map-floor)
+
+| Item | Value |
+| --- | --- |
+| Best result | map1 and map2 final (equivalent): val pred loss 0.0133, copy ratio 0.22, action sensitivity 6.7 to 7.1, rank 93, SIGReg 1.48 |
+| What limits it | Little position or room information in the latent (below or equal to pixels); single-frame identifiability; patch novelty hard to detect |
+| Next | Test Hp1 against Hp2; decide the gate (G6); short-term memory (G4) |
+| Cost | About $5.70 (2.9 hours of instance time); campaign total about $15.20 of $40 |
+| Code | PR #3 (map-floor data), PR #5 (`--init-from`, not used); helper fixes in `scratch/hitl` (probe-trend pipefail) |
