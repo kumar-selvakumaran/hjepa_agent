@@ -3,6 +3,7 @@
 Local smoke run:  uv run python scripts/train.py --data <shard> --run-name smoke --max-steps 200 --val-batches 5
 Cloud run:        uv run python scripts/train.py --data map_pretrain_200 map_pretrain_201 map_pretrain_202 map_pretrain_203 --out <persistent dir> --run-name run1
 Resume:           add --resume. Preflight only: add --preflight-only.
+Continue:         --init-from <ckpt> --run-name <new>: start from trained weights with a fresh optimiser and warmup-cosine schedule (warm restart).
 Outputs: <out>/<run-name>/{checkpoints, csv, tb, env.json, preflight.json, summary.json}.
 No goals or planning exist in this model (INT-11): the loss is next-latent prediction plus SIGReg."""
 
@@ -136,6 +137,7 @@ def main():
     ap.add_argument("--weighted", action="store_true", help="importance-weighted sampling for uniform coverage (INT-56)")
     ap.add_argument("--num-workers", type=int)
     ap.add_argument("--resume", nargs="?", const="latest", choices=["latest", "last_good"], help="resume from the newest checkpoint, or from last_good")
+    ap.add_argument("--init-from", type=Path, help="load model weights from this checkpoint; optimiser and schedule start fresh")
     ap.add_argument("--fail-at-step", type=int, help="test hook: raise at this step")
     ap.add_argument("--preflight-only", action="store_true")
     ap.add_argument("--no-require-gpu", dest="require_gpu", action="store_false")
@@ -162,6 +164,9 @@ def main():
         return
 
     module = LeWMModule(recipe, total_steps)
+    if args.init_from:
+        module.load_state_dict(torch.load(args.init_from, map_location="cpu", weights_only=False)["state_dict"])
+        log(f"initialised weights from {args.init_from}")
     ck = out / "checkpoints"
     guard = CollapseGuard(ck, recipe.embed_dim, recipe.collapse_sigreg_max, recipe.collapse_rank_min_frac, recipe.collapse_patience, recipe.collapse_grace_steps)
     trainer = pl.Trainer(
